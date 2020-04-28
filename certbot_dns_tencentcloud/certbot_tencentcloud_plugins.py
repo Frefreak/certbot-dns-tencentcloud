@@ -34,7 +34,7 @@ class Authenticator(dns_common.DNSAuthenticator):
     def add_parser_arguments(cls, add):  # pylint: disable=arguments-differ
         super(Authenticator, cls).add_parser_arguments(add)
         add("credentials", help="TencentCloud credentials INI file.")
-
+# pylint: disable=no-self-use
     def more_info(self):  # pylint: disable=missing-function-docstring
         return (
             "This plugin configures a DNS TXT record to respond to a dns-01 challenge using "
@@ -49,6 +49,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         v = credentials.conf(arg)
         if not v:
             raise errors.PluginError("{} is required".format(arg))
+# pylint: enable=no-self-use
 
     def _setup_credentials(self):
         self.credentials = self._configure_credentials(
@@ -69,7 +70,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             if record["name"] == sub_domain:
                 rid = data["id"]
                 break
-        if rid == None:
+        if rid is None:
             client.get_record_create(domain, sub_domain, "TXT", validation)
         else:
             client.get_record_modify(domain, rid, sub_domain, "TXT", validation)
@@ -85,7 +86,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             if record["name"] == sub_domain:
                 rid = record["id"]
                 break
-        if rid == None:
+        if rid is None:
             raise errors.PluginError(
                 "could not find record in cleanup: {}".format(validation_name)
             )
@@ -143,8 +144,7 @@ class TencentCloudClient:
         rj = json.loads(urlopen(full_url).read().decode())
         if rj["code"] == 0:
             return rj["data"]
-        else:
-            raise APIException(rj["message"])
+        raise APIException(rj["message"])
 
     def get_record_list(self, domain, sub_domain=None):
         """Currently does not care about pagination."""
@@ -163,6 +163,7 @@ class TencentCloudClient:
         )
         return self.mk_get_req("RecordCreate", params)
 
+# pylint: disable=too-many-arguments
     def get_record_modify(self, domain, rid, sub_domain, record_type, value):
         params = dict(
             domain=domain,
@@ -173,6 +174,7 @@ class TencentCloudClient:
             value=value,
         )
         return self.mk_get_req("RecordModify", params)
+# pylint: enable=too-many-arguments
 
     def get_record_delete(self, domain, rid):
         params = dict(domain=domain, recordId=rid,)
