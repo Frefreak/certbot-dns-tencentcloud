@@ -6,7 +6,10 @@ that can complete the DNS-01 challenge using the Tencent Cloud API.
 
 ## Installation
 
-Only Tested on python 3.8, should work on python 3.6 onwards.
+Only Tested on python 3.8, should work on python 3.7 too.
+
+- no plan to support python2
+- [dataclasses](https://docs.python.org/3/library/dataclasses.html) is used, so python 3.6 and down will not work. However you can try installing `dataclasses` from pypi.
 
 Use pip to install this package:
 ```
