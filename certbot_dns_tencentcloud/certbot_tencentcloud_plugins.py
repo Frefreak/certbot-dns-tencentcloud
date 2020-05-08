@@ -139,7 +139,9 @@ class TencentCloudClient:
         )
         rj = json.loads(urlopen(full_url).read().decode())
         if rj["code"] == 0:
-            return rj["data"]
+            if 'data' in rj:    # only exception is delete
+                return rj["data"]
+            return {}
         raise APIException(rj["message"])
 
     def get_record_list(self, domain, sub_domain=None):
