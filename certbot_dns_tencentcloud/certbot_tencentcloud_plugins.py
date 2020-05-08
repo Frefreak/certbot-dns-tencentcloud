@@ -66,7 +66,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         sub_domain = validation_name.split(".")[0]
         resp = client.get_record_list(domain, sub_domain)
         rid = None
-        if resp['info']['record_total'] > 0:
+        if int(resp['info']['record_total']) > 0:
             rid = resp['records'][0]['id']
         if rid is None:
             client.get_record_create(domain, sub_domain, "TXT", validation)
@@ -80,7 +80,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         sub_domain = validation_name.split(".")[0]
         resp = client.get_record_list(domain, sub_domain)
         rid = None
-        if resp['info']['record_total'] > 0:
+        if int(resp['info']['record_total']) > 0:
             rid = resp['records'][0]['id']
         if rid is None:
             raise errors.PluginError(
