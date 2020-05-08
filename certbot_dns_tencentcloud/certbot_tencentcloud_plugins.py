@@ -63,13 +63,11 @@ class Authenticator(dns_common.DNSAuthenticator):
         client = TencentCloudClient(
             self.credentials.conf("secret_id"), self.credentials.conf("secret_key")
         )
-        data = client.get_record_list(domain)
-        rid = None
         sub_domain = validation_name.split(".")[0]
-        for record in data["records"]:
-            if record["name"] == sub_domain:
-                rid = data["id"]
-                break
+        resp = client.get_record_list(domain, sub_domain)
+        rid = None
+        if resp['info']['record_total'] > 0:
+            rid = resp['records'][0]['id']
         if rid is None:
             client.get_record_create(domain, sub_domain, "TXT", validation)
         else:
@@ -79,13 +77,11 @@ class Authenticator(dns_common.DNSAuthenticator):
         client = TencentCloudClient(
             self.credentials.conf("secret_id"), self.credentials.conf("secret_key")
         )
-        data = client.get_record_list(domain)
-        rid = None
         sub_domain = validation_name.split(".")[0]
-        for record in data["records"]:
-            if record["name"] == sub_domain:
-                rid = record["id"]
-                break
+        resp = client.get_record_list(domain, sub_domain)
+        rid = None
+        if resp['info']['record_total'] > 0:
+            rid = resp['records'][0]['id']
         if rid is None:
             raise errors.PluginError(
                 "could not find record in cleanup: {}".format(validation_name)
