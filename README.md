@@ -71,3 +71,9 @@ can be accessed by other users on your system.
 Make a separate user under your account,
 and limit its access to only allow DNS access
 and the IP address of the machine(s) that will be using it.
+
+### FAQ
+
+1. Which strategy should I choose to limit my API key access to only allow DNS resolution related operation?
+
+Currently it seems there's no specific strategy corresponding to this, and sadly the only strategy I tried that worked is **QCloudResourceFullAccess**. Trying to negotiate with tencent cloud team to support this is on my todo-list though.
