@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='certbot-dns-tencentcloud',
-    version='1.0.8',
+    version='1.0.9',
     author='Xiangyu Zhu',
     author_email='carsonzhu@tencent.com',
     description='Tencent Cloud DNS Authenticator plugin for Certbot',
