@@ -76,4 +76,8 @@ and the IP address of the machine(s) that will be using it.
 
 1. Which strategy should I choose to limit my API key access to only allow DNS resolution related operation?
 
-Currently it seems there's no specific strategy corresponding to this, and sadly the only strategy I tried that worked is **QCloudResourceFullAccess**. Trying to negotiate with tencent cloud team to support this is on my todo-list though.
+~~Currently it seems there's no specific strategy corresponding to this, and sadly the only strategy I tried that worked is **QCloudResourceFullAccess**. Trying to negotiate with tencent cloud team to support this is on my todo-list though.~~
+
+Response Updated: 感谢反馈。DNS 解析已有 QCloudCNSFullAccess 策略，但需要加白才可使用。后续 DNS 解析会接入 CAM 。
+
+DNS reslution now already has QCloudCNSFullAccess strategy, but needs whitelist to be able to use (probably needs ticket?). Later this will be added to CAM (If I understand correctly this means it will be available just like other strategies).
