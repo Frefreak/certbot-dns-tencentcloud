@@ -20,20 +20,20 @@ Verify the installation with Certbot:
 ```
 sudo certbot plugins
 ```
-You should see `certbot-dns-tencentcloud:dns-tencentcloud` in the output.
+You should see `dns-tencentcloud` in the output.
 
 
 ## Usage
 
-To use this plugin, set the authenticator to `certbot-dns-tencentcloud:dns-tencentcloud` via the `-a` or `--authenticator` flag.
+To use this plugin, set the authenticator to `dns-tencentcloud` via the `-a` or `--authenticator` flag.
 You may also set this using Certbot's configuration file (defaults to `/etc/letsencrypt/cli.ini`).
 
 You will also need to provide a credentials file with your Tencent Cloud API key id and secret, like the following:
 ```
-certbot_dns_tencentcloud:dns_tencentcloud_secret_id  = TENCENT_CLOUD_SECRET_ID
-certbot_dns_tencentcloud:dns_tencentcloud_secret_key = TENCENT_CLOUD_SECRET_KEY
+dns_tencentcloud_secret_id  = TENCENT_CLOUD_SECRET_ID
+dns_tencentcloud_secret_key = TENCENT_CLOUD_SECRET_KEY
 ```
-The path to this file can be provided interactively or via the `--certbot-dns-tencentcloud:dns-tencentcloud-credentials` argument.
+The path to this file can be provided interactively or via the `--dns-tencentcloud-credentials` argument.
 
 **CAUTION:**
 Protect your API key as you would the password to your account.
@@ -43,8 +43,8 @@ Be sure to **read the security tips below**.
 
 ### Arguments
 
-- `--certbot-dns-tencentcloud:dns-tencentcloud-credentials` path to Tencent Cloud credentials INI file (Required)
-- `--certbot-dns-tencentcloud:dns-tencentcloud-propagation-seconds` seconds to wait before verifying the DNS record (Default: 10)
+- `--dns-tencentcloud-credentials` path to Tencent Cloud credentials INI file (Required)
+- `--dns-tencentcloud-propagation-seconds` seconds to wait before verifying the DNS record (Default: 10)
 
 **NOTE:** Due to a [limitation in Certbot](https://github.com/certbot/certbot/issues/4351),
 these arguments *cannot* be set via Certbot's configuration file.
@@ -54,8 +54,8 @@ these arguments *cannot* be set via Certbot's configuration file.
 
 ```
 certbot certonly \
-  -a certbot-dns-tencentcloud:dns-tencentcloud \
-  --certbot-dns-tencentcloud:dns-tencentcloud-credentials ~/.secrets/certbot/tencentcloud.ini \
+  -a dns-tencentcloud \
+  --dns-tencentcloud-credentials ~/.secrets/certbot/tencentcloud.ini \
   -d example.com
 ```
 
