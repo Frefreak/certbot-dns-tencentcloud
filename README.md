@@ -76,8 +76,28 @@ and the IP address of the machine(s) that will be using it.
 
 1. Which strategy should I choose to limit my API key access to only allow DNS resolution related operation?
 
-~~Currently it seems there's no specific strategy corresponding to this, and sadly the only strategy I tried that worked is **QCloudResourceFullAccess**. Trying to negotiate with tencent cloud team to support this is on my todo-list though.~~
+**Response from official team**:
 
-Response Updated: 感谢反馈。DNS 解析已有 QCloudCNSFullAccess 策略，但需要加白才可使用。后续 DNS 解析会接入 CAM 。
+> 感谢反馈。DNS 解析已有 QCloudCNSFullAccess 策略，但需要加白才可使用。后续 DNS 解析会接入 CAM 。
 
-DNS reslution now already has QCloudCNSFullAccess strategy, but needs whitelist to be able to use (probably needs ticket?). Later this will be added to CAM (If I understand correctly this means it will be available just like other strategies).
+**Translation**:
+
+DNS reslution now already has QCloudCNSFullAccess strategy, but needs whitelist to be able to
+use (probably needs ticket?). Later this will be added to CAM (If I understand correctly this
+means it will be available just like other strategies).
+
+**Update**:
+
+As of now (2021-06-12) it seems `QCloudCNSFullAccess` may not be usable even by opening a ticket, YMMV.
+
+2. renew certs for `*.abc.com` and `abc.com` sometimes show error about incorrect TXT records.
+
+It seems Let's Encrypt cache TXT records for at most 60 seconds, since DNSPod doesn't seem
+to allow setting TXT record's TTL below 60, in this case the best/safest way is to set
+`--dns-tencentcloud-propagation-seconds` longer than 60.
+
+3. Debug mode?
+
+```
+--dns-tencentcloud-debug true
+```
