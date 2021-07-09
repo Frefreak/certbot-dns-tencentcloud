@@ -36,7 +36,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         super(Authenticator, cls).add_parser_arguments(add)
         add(
             "credentials",
-            help="TencentCloud credentials INI file. If omit will look up environments for TENCENTCLOUD_SECRET_ID, TENCENTCLOUD_SECRET_KEY",
+            help="TencentCloud credentials INI file. If omitted, the environment variables TENCENTCLOUD_SECRET_ID and TENCENTCLOUD_SECRET_KEY will be tried",
         )
         add(
             "debug",
