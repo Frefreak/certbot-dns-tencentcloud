@@ -1,6 +1,7 @@
 import json
 import random
 import time
+import os
 from base64 import b64encode
 from dataclasses import dataclass
 from hmac import HMAC
@@ -28,11 +29,16 @@ class Authenticator(dns_common.DNSAuthenticator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.credentials = None
+        self.secret_id = None
+        self.secret_key = None
 
     @classmethod
     def add_parser_arguments(cls, add):  # pylint: disable=arguments-differ
         super(Authenticator, cls).add_parser_arguments(add)
-        add("credentials", help="TencentCloud credentials INI file.")
+        add(
+            "credentials",
+            help="TencentCloud credentials INI file. If omit will look up environments for TENCENT_CLOUD_SECRET_ID, TENCENT_CLOUD_SECRET_KEY",
+        )
         add(
             "debug",
             help="turn on debug mode (print some debug info)",
@@ -56,6 +62,11 @@ class Authenticator(dns_common.DNSAuthenticator):
         if not v:
             raise errors.PluginError("{} is required".format(arg))
 
+    def chk_environ_exist(self, arg):
+        if os.environ.get(arg) is None:
+            print(os.environ)
+            raise errors.PluginError("The environment {} is required".format(arg))
+
     def chk_base_domain(self, base_domain, validation_name):
         if not validation_name.endswith("." + base_domain):
             raise errors.PluginError(
@@ -67,8 +78,8 @@ class Authenticator(dns_common.DNSAuthenticator):
         if self.conf("debug"):
             print("finding base domain")
         client = TencentCloudClient(
-            self.credentials.conf("secret_id"),
-            self.credentials.conf("secret_key"),
+            self.secret_id,
+            self.secret_key,
             self.conf("debug"),
         )
         segments = domain.split(".")
@@ -91,19 +102,27 @@ class Authenticator(dns_common.DNSAuthenticator):
     # pylint: enable=no-self-use
 
     def _setup_credentials(self):
-        self.credentials = self._configure_credentials(
-            "credentials",
-            "TencentCloud credentials INI file",
-            None,
-            self._validate_credentials,
-        )
+        if self.conf("credentials"):
+            self.credentials = self._configure_credentials(
+                "credentials",
+                "TencentCloud credentials INI file",
+                None,
+                self._validate_credentials,
+            )
+            self.secret_id=self.credentials.conf("secret_id")
+            self.secret_key=self.credentials.conf("secret_key")
+        else:
+            self.chk_environ_exist("TENCENTCLOUD_SECRET_ID")
+            self.chk_environ_exist("TENCENTCLOUD_SECRET_KEY")
+            self.secret_id=os.environ.get("TENCENTCLOUD_SECRET_ID")
+            self.secret_key=os.environ.get("TENCENTCLOUD_SECRET_KEY")
 
     def _perform(self, domain, validation_name, validation):
         if self.conf("debug"):
             print("perform", domain, validation_name, validation)
         client = TencentCloudClient(
-            self.credentials.conf("secret_id"),
-            self.credentials.conf("secret_key"),
+            self.secret_id,
+            self.secret_key,
             self.conf("debug"),
         )
         base_domain, _ = self.determine_base_domain(domain)
@@ -116,8 +135,8 @@ class Authenticator(dns_common.DNSAuthenticator):
         if self.conf("debug"):
             print("cleanup", domain, validation_name, validation)
         client = TencentCloudClient(
-            self.credentials.conf("secret_id"),
-            self.credentials.conf("secret_key"),
+            self.secret_id,
+            self.secret_key,
             self.conf("debug"),
         )
         base_domain, records = self.determine_base_domain(domain)
