@@ -28,7 +28,6 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.credentials = None
         self.secret_id = None
         self.secret_key = None
 
@@ -103,14 +102,14 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     def _setup_credentials(self):
         if self.conf("credentials"):
-            self.credentials = self._configure_credentials(
+            credentials = self._configure_credentials(
                 "credentials",
                 "TencentCloud credentials INI file",
                 None,
                 self._validate_credentials,
             )
-            self.secret_id=self.credentials.conf("secret_id")
-            self.secret_key=self.credentials.conf("secret_key")
+            self.secret_id=credentials.conf("secret_id")
+            self.secret_key=credentials.conf("secret_key")
         else:
             self.chk_environ_exist("TENCENTCLOUD_SECRET_ID")
             self.chk_environ_exist("TENCENTCLOUD_SECRET_KEY")
