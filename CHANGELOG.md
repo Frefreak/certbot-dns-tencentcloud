@@ -1,12 +1,17 @@
 # Changelog
 
+## 2.0.0
+
+- Upgrade from old `cns` api to v3 `dnspod` api. From now on should only need to
+give **QcloudDNSPodFullAccess** strategy.
+
 ## 1.3.0
 
-- now support setting `secret_id` and `secret_key` by environment (#3)
+- Now support setting `secret_id` and `secret_key` by environment (#3)
 
 ## 1.2.0
 
-- add debug option
+- Add debug option
 
 ## 1.1.0
 

@@ -1,12 +1,16 @@
 import json
+import hashlib
+import sys
 import random
 import time
+from datetime import datetime
 import os
 from base64 import b64encode
+from typing import Dict, Tuple, Optional
 from dataclasses import dataclass
 from hmac import HMAC
 from urllib.parse import quote
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 import zope.interface
 from certbot import errors, interfaces
@@ -89,11 +93,11 @@ class Authenticator(dns_common.DNSAuthenticator):
             tried.append(dt)
             i -= 1
             try:
-                resp = client.get_record_list(dt)
+                resp = client.describe_record_list(dt)
             # if error, we don't seem to own this domain
             except APIException as _:
                 continue
-            return dt, resp["records"]
+            return dt, resp["RecordList"]
         raise errors.PluginError(
             "failed to determine base domain, please report to dev. " f"Tried: {tried}"
         )
@@ -108,13 +112,13 @@ class Authenticator(dns_common.DNSAuthenticator):
                 None,
                 self._validate_credentials,
             )
-            self.secret_id=credentials.conf("secret_id")
-            self.secret_key=credentials.conf("secret_key")
+            self.secret_id = credentials.conf("secret_id")
+            self.secret_key = credentials.conf("secret_key")
         else:
             self.chk_environ_exist("TENCENTCLOUD_SECRET_ID")
             self.chk_environ_exist("TENCENTCLOUD_SECRET_KEY")
-            self.secret_id=os.environ.get("TENCENTCLOUD_SECRET_ID")
-            self.secret_key=os.environ.get("TENCENTCLOUD_SECRET_KEY")
+            self.secret_id = os.environ.get("TENCENTCLOUD_SECRET_ID")
+            self.secret_key = os.environ.get("TENCENTCLOUD_SECRET_KEY")
 
     def _perform(self, domain, validation_name, validation):
         if self.conf("debug"):
@@ -128,7 +132,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         self.chk_base_domain(base_domain, validation_name)
 
         sub_domain = validation_name[: -(len(base_domain) + 1)]
-        resp = client.get_record_create(base_domain, sub_domain, "TXT", validation)
+        _ = client.create_record(base_domain, sub_domain, "TXT", validation)
 
     def _cleanup(self, domain, validation_name, validation):
         if self.conf("debug"):
@@ -141,8 +145,8 @@ class Authenticator(dns_common.DNSAuthenticator):
         base_domain, records = self.determine_base_domain(domain)
         self.chk_base_domain(base_domain, validation_name)
         for rec in records:
-            if rec["type"] == "TXT" and rec["value"] == validation:
-                client.get_record_delete(base_domain, rec["id"])
+            if rec["Type"] == "TXT" and rec["Value"] == validation:
+                client.delete_record(base_domain, rec["RecordId"])
 
 
 class APIException(Exception):
@@ -150,95 +154,186 @@ class APIException(Exception):
 
 
 class TencentCloudClient:
-    """Specifically used for domain DNS management."""
+    """Simple specialized client for dnspod API."""
 
     @dataclass
     class Cred:
         secret_id: str
         secret_key: str
 
-    endpoint = "cns.api.qcloud.com/v2/index.php"
-    url = "https://" + endpoint
+    host = "dnspod.tencentcloudapi.com"
+    url = "https://" + host
+    algorithm = "TC3-HMAC-SHA256"
+    version = "2021-03-23"
 
     def __init__(self, secret_id, secret_key, debug=False):
         self.cred = self.Cred(secret_id, secret_key)
         self.debug = debug
 
-    def _expand_params(self, action, params):
-        params.update(
-            {
-                "Action": action,
-                "SecretId": self.cred.secret_id,
-                "Timestamp": int(time.time()),
-                "Nonce": random.randrange(10000),
-                "Region": "ap-shanghai",  # not important
-                "SignatureMethod": "HmacSHA256",  # stick to sha256
-            }
+    def _mk_post_sign_v3(self, payload: Dict) -> Dict:
+        now = datetime.now()
+        now_timestamp = int(now.timestamp())
+        date = now.strftime("%Y-%m-%d")
+        headers = {
+            "Something-Random": random.getrandbits(64),
+            "Content-Type": "application/json; charset=utf-8",
+            "Host": self.host,
+            "X-TC-Timestamp": now_timestamp,
+        }
+        canonical_headers = "\n".join(
+            [k.lower() + ":" + str(headers[k]).lower() for k in sorted(headers)]
         )
-
-    def _mk_sign(self, verb, params):
-        s = []
-        for k, v in sorted(params.items()):
-            s.append("{}={}".format(k.replace("_", "."), v))
-        sign_str = verb + self.endpoint + "?" + "&".join(s)
-        return b64encode(
-            HMAC(self.cred.secret_key.encode(), sign_str.encode(), "sha256").digest()
-        ).decode()
-
-    def mk_get_req(self, action, params):
-        self._expand_params(action, params)
-        if self.debug:
-            print(f"\x1b[32;1m{action}\x1b[0m params: {params}")
-        signature = self._mk_sign("GET", params)
-        params["Signature"] = signature
-        full_url = (
-            self.url
-            + "?"
-            + "&".join([quote(str(k)) + "=" + quote(str(v)) for k, v in params.items()])
+        signed_headers = ";".join([k.lower() for k in sorted(headers)])
+        hashed_request_payload = hashlib.sha256(
+            json.dumps(payload).encode()
+        ).hexdigest()
+        canonical_request = [
+            "POST",
+            "/",
+            "",
+            canonical_headers,
+            "",
+            signed_headers,
+            hashed_request_payload,
+        ]
+        hashed_canonical_request = hashlib.sha256(
+            "\n".join(canonical_request).encode()
+        ).hexdigest()
+        service, ending = ("dnspod", "tc3_request")
+        credential_scope = f"{date}/{service}/{ending}"
+        string_to_sign = "\n".join(
+            [
+                self.algorithm,
+                str(now_timestamp),
+                credential_scope,
+                hashed_canonical_request,
+            ]
         )
-        rj = json.loads(urlopen(full_url).read().decode())
-        if self.debug:
-            print(f"\x1b[31;1m{action}\x1b[31;0m resp: {rj}")
-        if rj["code"] == 0:
-            if "data" in rj:  # only exception is delete
-                return rj["data"]
-            return {}
-        raise APIException(f'{action}: {rj["message"]}')
-
-    def get_record_list(self, domain, sub_domain=None):
-        """Currently does not care about pagination."""
-        params = dict(domain=domain)
-        if sub_domain is not None:
-            params["subDomain"] = sub_domain
-        return self.mk_get_req("RecordList", params)
-
-    def get_record_create(self, domain, sub_domain, record_type, value):
-        params = dict(
-            domain=domain,
-            subDomain=sub_domain,
-            recordType=record_type,
-            recordLine="默认",
-            value=value,
+        secret_date = HMAC(
+            ("TC3" + self.cred.secret_key).encode(), date.encode(), "sha256"
+        ).digest()
+        secret_service = HMAC(secret_date, service.encode(), "sha256").digest()
+        secret_signing = HMAC(secret_service, ending.encode(), "sha256").digest()
+        sig = HMAC(secret_signing, string_to_sign.encode(), "sha256").hexdigest()
+        authorization = (
+            self.algorithm
+            + " "
+            + "Credential="
+            + self.cred.secret_id
+            + "/"
+            + credential_scope
+            + ", "
+            + "SignedHeaders="
+            + signed_headers
+            + ", "
+            + "Signature="
+            + sig
         )
-        return self.mk_get_req("RecordCreate", params)
+        headers["Authorization"] = authorization
+        return headers
 
-    # pylint: disable=too-many-arguments
-    def get_record_modify(self, domain, rid, sub_domain, record_type, value):
-        params = dict(
-            domain=domain,
-            recordId=rid,
-            subDomain=sub_domain,
-            recordType=record_type,
-            recordLine="默认",
-            value=value,
-        )
-        return self.mk_get_req("RecordModify", params)
+    def mk_post_req(self, action: str, payload: Dict) -> Dict:
+        headers = self._mk_post_sign_v3(payload)
+        headers["X-TC-Action"] = action
+        headers["X-TC-Version"] = self.version
+        request = Request(self.url, json.dumps(payload).encode(), headers)
+        rj = json.loads(urlopen(request).read().decode())
+        resp = rj["Response"]
+        if "Error" in resp:
+            raise APIException(resp["Error"])
+        return resp
 
-    # pylint: enable=too-many-arguments
+    def describe_domain(self, domain: str) -> Dict:
+        payload = {
+            "Domain": domain,
+        }
+        return self.mk_post_req("DescribeDomain", payload)
 
-    def get_record_delete(self, domain, rid):
-        params = dict(
-            domain=domain,
-            recordId=rid,
-        )
-        return self.mk_get_req("RecordDelete", params)
+    def describe_record_list(self, domain: str) -> Dict:
+        payload = {
+            "Domain": domain,
+        }
+        return self.mk_post_req("DescribeRecordList", payload)
+
+    def create_record(
+        self, domain: str, sub_domain: str, record_type: str, value: str
+    ) -> Dict:
+        payload = {
+            "Domain": domain,
+            "RecordType": record_type,
+            "RecordLine": "默认",
+            "SubDomain": sub_domain,
+            "Value": value,
+        }
+        return self.mk_post_req("CreateRecord", payload)
+
+    def modify_record(
+        self, domain: str, rid: int, sub_domain: str, record_type: str, value: str
+    ) -> Dict:
+        payload = {
+            "Domain": domain,
+            "RecordType": record_type,
+            "RecordLine": "默认",
+            "SubDomain": sub_domain,
+            "Value": value,
+            "RecordId": rid,
+        }
+        return self.mk_post_req("ModifyRecord", payload)
+
+    def delete_record(self, domain: str, rid: int):
+        payload = {
+            "Domain": domain,
+            "RecordId": rid,
+        }
+        return self.mk_post_req("DeleteRecord", payload)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <domain>")
+        sys.exit(1)
+    domain = sys.argv[1]
+    secret_id = os.getenv("SECRET_ID")
+    secret_key = os.getenv("SECRET_KEY")
+    if not secret_id or not secret_key:
+        print("SECRET_ID && SECRET_KEY")
+        sys.exit(1)
+    cli = TencentCloudClient(secret_id, secret_key)
+    r = cli.describe_domain(domain)
+    sub = f"test-{random.getrandbits(32)}"
+
+    print(
+        "following operations might render your domain with un-cleaned up test record if something wrong happens in the middle."
+    )
+    input("enter to continue...")
+
+    print("creating record...")
+    r = cli.create_record(
+        domain, sub, "TXT", datetime.now().strftime("%Y%m%d %H:%M:%S")
+    )
+    print(
+        f"now please lookup TXT record of {sub}.{domain}, might need some secs to propagate"
+    )
+    input("enter to continue...")
+
+    print("modifying record...")
+    r = cli.describe_record_list(domain)
+    rid = None
+    for rec in r["RecordList"]:
+        if rec["Name"] == sub:
+            rid = rec["RecordId"]
+            break
+    if rid is None:
+        print("weird, new record not found, exiting...")
+        sys.exit(1)
+    r = cli.modify_record(
+        domain, rid, sub, "TXT", datetime.now().strftime("%Y%m%d %H:%M:%S")
+    )
+    print(
+        f"now please lookup TXT record of {sub}.{domain} again (probably need to wait ~60s)"
+    )
+    input("enter to continue...")
+
+    print("deleting record...")
+    r = cli.delete_record(domain, rid)
+    print("you can check now its deleted")

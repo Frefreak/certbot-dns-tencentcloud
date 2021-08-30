@@ -76,19 +76,7 @@ and the IP address of the machine(s) that will be using it.
 
 1. Which strategy should I choose to limit my API key access to only allow DNS resolution related operation?
 
-**Response from official team**:
-
-> 感谢反馈。DNS 解析已有 QCloudCNSFullAccess 策略，但需要加白才可使用。后续 DNS 解析会接入 CAM 。
-
-**Translation**:
-
-DNS reslution now already has QCloudCNSFullAccess strategy, but needs whitelist to be able to
-use (probably needs ticket?). Later this will be added to CAM (If I understand correctly this
-means it will be available just like other strategies).
-
-**Update**:
-
-As of now (2021-06-12) it seems `QCloudCNSFullAccess` may not be usable even by opening a ticket, YMMV.
+We now use the new DNSPOD api so you need to give `QcloudDNSPodFullAccess` strategy (need to add record so write permission is necessary).
 
 2. renew certs for `*.abc.com` and `abc.com` sometimes show error about incorrect TXT records.
 
