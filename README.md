@@ -6,7 +6,7 @@ that can complete the DNS-01 challenge using the Tencent Cloud API.
 
 ## Installation
 
-Only Tested on python 3.8, should work on python 3.7 too.
+Only Tested on python 3.8, should work on python 3.7 too and forward.
 
 - no plan to support python2
 - [dataclasses](https://docs.python.org/3/library/dataclasses.html) is used, so python 3.6 and down will not work. However you can try installing `dataclasses` from pypi.
@@ -78,7 +78,7 @@ and the IP address of the machine(s) that will be using it.
 
 We now use the new DNSPOD api so you need to give `QcloudDNSPodFullAccess` strategy (need to add record so write permission is necessary).
 
-2. renew certs for `*.abc.com` and `abc.com` sometimes show error about incorrect TXT records.
+2. renew certs for `*.abc.com` and `abc.com` at the same time sometimes show error about incorrect TXT records.
 
 It seems Let's Encrypt cache TXT records for at most 60 seconds, since DNSPod doesn't seem
 to allow setting TXT record's TTL below 60, in this case the best/safest way is to set
