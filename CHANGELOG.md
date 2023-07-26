@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- now cleanup record properly
+- improve README
+
 ## 2.0.0
 
 - Upgrade from old `cns` api to v3 `dnspod` api. From now on should only need to

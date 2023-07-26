@@ -30,10 +30,13 @@ You may also set this using Certbot's configuration file (defaults to `/etc/lets
 
 You will also need to provide a credentials file with your Tencent Cloud API key id and secret, like the following:
 ```
-dns_tencentcloud_secret_id  = TENCENT_CLOUD_SECRET_ID
-dns_tencentcloud_secret_key = TENCENT_CLOUD_SECRET_KEY
+dns_tencentcloud_secret_id  = TENCENTCLOUD_SECRET_ID
+dns_tencentcloud_secret_key = TENCENTCLOUD_SECRET_KEY
 ```
 The path to this file can be provided interactively or via the `--dns-tencentcloud-credentials` argument.
+
+You can also provide the credential using `TENCENTCLOUD_SECRET_ID`
+and `TENCENTCLOUD_SECRET_KEY` environment variables.
 
 **CAUTION:**
 Protect your API key as you would the password to your account.
@@ -52,10 +55,21 @@ these arguments *cannot* be set via Certbot's configuration file.
 
 ### Example
 
+When in root:
+
 ```
 certbot certonly \
   -a dns-tencentcloud \
   --dns-tencentcloud-credentials ~/.secrets/certbot/tencentcloud.ini \
+  -d example.com
+```
+
+or if providing credentials using environment variable:
+
+```
+export TENCENTCLOUD_SECRET_ID=<your_secret_id> TENCENTCLOUD_SECRET_KEY=<your_secret_key>
+certbot certonly \
+  -a dns-tencentcloud \
   -d example.com
 ```
 

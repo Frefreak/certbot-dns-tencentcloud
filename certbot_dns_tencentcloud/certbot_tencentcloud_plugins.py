@@ -2,14 +2,11 @@ import json
 import hashlib
 import sys
 import random
-import time
 from datetime import datetime
 import os
-from base64 import b64encode
-from typing import Dict, Tuple, Optional
+from typing import Dict
 from dataclasses import dataclass
 from hmac import HMAC
-from urllib.parse import quote
 from urllib.request import urlopen, Request
 
 import zope.interface
@@ -34,6 +31,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         super().__init__(*args, **kwargs)
         self.secret_id = None
         self.secret_key = None
+        self.cleanup_maps = {}
 
     @classmethod
     def add_parser_arguments(cls, add):  # pylint: disable=arguments-differ
@@ -97,7 +95,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             # if error, we don't seem to own this domain
             except APIException as _:
                 continue
-            return dt, resp["RecordList"]
+            return dt, resp
         raise errors.PluginError(
             "failed to determine base domain, please report to dev. " f"Tried: {tried}"
         )
@@ -132,7 +130,8 @@ class Authenticator(dns_common.DNSAuthenticator):
         self.chk_base_domain(base_domain, validation_name)
 
         sub_domain = validation_name[: -(len(base_domain) + 1)]
-        _ = client.create_record(base_domain, sub_domain, "TXT", validation)
+        r = client.create_record(base_domain, sub_domain, "TXT", validation)
+        self.cleanup_maps[validation_name] = (base_domain, r["RecordId"])
 
     def _cleanup(self, domain, validation_name, validation):
         if self.conf("debug"):
@@ -142,11 +141,11 @@ class Authenticator(dns_common.DNSAuthenticator):
             self.secret_key,
             self.conf("debug"),
         )
-        base_domain, records = self.determine_base_domain(domain)
-        self.chk_base_domain(base_domain, validation_name)
-        for rec in records:
-            if rec["Type"] == "TXT" and rec["Value"] == validation:
-                client.delete_record(base_domain, rec["RecordId"])
+        if validation_name in self.cleanup_maps:
+            base_domain, record_id = self.cleanup_maps[validation_name]
+            client.delete_record(base_domain, record_id)
+        else:
+            print("record id not found during cleanup, cleanup probably failed")
 
 
 class APIException(Exception):
@@ -249,11 +248,23 @@ class TencentCloudClient:
         }
         return self.mk_post_req("DescribeDomain", payload)
 
-    def describe_record_list(self, domain: str) -> Dict:
+    def describe_record_list(self, domain: str) -> list[Dict]:
+        offset = 0
         payload = {
             "Domain": domain,
+            # the maximum allowed limit
+            "Limit": 3000,
+            "Offset": offset,
         }
-        return self.mk_post_req("DescribeRecordList", payload)
+        records = []
+        resp = self.mk_post_req("DescribeRecordList", payload)
+        records.extend(resp["RecordList"])
+        while resp["RecordCountInfo"]["TotalCount"] > len(records):
+            payload['Offset'] = len(records)
+            resp = self.mk_post_req("DescribeRecordList", payload)
+            records.extend(resp["RecordList"])
+
+        return records
 
     def create_record(
         self, domain: str, sub_domain: str, record_type: str, value: str
@@ -293,10 +304,10 @@ if __name__ == "__main__":
         print(f"Usage: {sys.argv[0]} <domain>")
         sys.exit(1)
     domain = sys.argv[1]
-    secret_id = os.getenv("SECRET_ID")
-    secret_key = os.getenv("SECRET_KEY")
+    secret_id = os.getenv("TENCENTCLOUD_SECRET_ID")
+    secret_key = os.getenv("TENCENTCLOUD_SECRET_KEY")
     if not secret_id or not secret_key:
-        print("SECRET_ID && SECRET_KEY")
+        print("TENCENTCLOUD_SECRET_ID && TENCENTCLOUD_SECRET_KEY")
         sys.exit(1)
     cli = TencentCloudClient(secret_id, secret_key)
     r = cli.describe_domain(domain)
@@ -319,7 +330,7 @@ if __name__ == "__main__":
     print("modifying record...")
     r = cli.describe_record_list(domain)
     rid = None
-    for rec in r["RecordList"]:
+    for rec in r:
         if rec["Name"] == sub:
             rid = rec["RecordId"]
             break
