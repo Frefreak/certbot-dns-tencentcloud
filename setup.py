@@ -12,8 +12,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'certbot',
-        'zope.interface',
+        'certbot>=1.18.0',
     ],
     classifiers=[
         'Environment :: Plugins',

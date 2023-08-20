@@ -9,13 +9,10 @@ from dataclasses import dataclass
 from hmac import HMAC
 from urllib.request import urlopen, Request
 
-import zope.interface
-from certbot import errors, interfaces
+from certbot import errors
 from certbot.plugins import dns_common
 
 
-@zope.interface.implementer(interfaces.IAuthenticator)
-@zope.interface.provider(interfaces.IPluginFactory)
 class Authenticator(dns_common.DNSAuthenticator):
     """DNS Authenticator for TencentCloud
 
