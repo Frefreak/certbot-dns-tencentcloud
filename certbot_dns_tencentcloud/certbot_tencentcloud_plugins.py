@@ -4,7 +4,7 @@ import sys
 import random
 from datetime import datetime
 import os
-from typing import Dict
+from typing import Dict, List
 from dataclasses import dataclass
 from hmac import HMAC
 from urllib.request import urlopen, Request
@@ -248,7 +248,7 @@ class TencentCloudClient:
         }
         return self.mk_post_req("DescribeDomain", payload)
 
-    def describe_record_list(self, domain: str) -> list[Dict]:
+    def describe_record_list(self, domain: str) -> List[Dict]:
         offset = 0
         payload = {
             "Domain": domain,
