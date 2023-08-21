@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+
+compatibility fix thanks for osirisinferi
+
 ## 2.0.1
 
 - now cleanup record properly
