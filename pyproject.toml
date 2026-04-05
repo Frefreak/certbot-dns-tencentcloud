@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "certbot-dns-tencentcloud"
+version = "2.1.0"
+description = "Tencent Cloud DNS Authenticator plugin for Certbot"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Xiangyu Zhu", email = "carsonzhu@tencent.com" }]
+requires-python = ">=3.7"
+dependencies = ["certbot>=1.18.0"]
+classifiers = [
+    "Environment :: Plugins",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+    "Topic :: System :: Installation/Setup",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/frefreak/certbot-dns-tencentcloud"
+
+[project.entry-points."certbot.plugins"]
+dns-tencentcloud = "certbot_dns_tencentcloud.certbot_tencentcloud_plugins:Authenticator"
+
+[tool.setuptools.packages.find]
+include = ["certbot_dns_tencentcloud*"]
