@@ -2,8 +2,7 @@ import json
 import hashlib
 import sys
 import random
-import time
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from typing import Dict, List
 from dataclasses import dataclass
@@ -168,8 +167,9 @@ class TencentCloudClient:
         self.debug = debug
 
     def _mk_post_sign_v3(self, payload: Dict) -> Dict:
-        now_timestamp = int(time.time())
-        date = datetime.utcfromtimestamp(now_timestamp).strftime("%Y-%m-%d")
+        now = datetime.now(timezone.utc)
+        now_timestamp = int(now.timestamp())
+        date = now.strftime("%Y-%m-%d")
         headers = {
             "Something-Random": random.getrandbits(64),
             "Content-Type": "application/json; charset=utf-8",
