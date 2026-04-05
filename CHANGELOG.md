@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.0
+
+- fix the utc time bug (frederick-wang)
+- add recent python versions to supported ver
+
 ## 2.0.2
 
 compatibility fix thanks for osirisinferi
